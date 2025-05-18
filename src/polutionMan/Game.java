@@ -1,7 +1,13 @@
 package polutionMan;
 
 import java.awt.Graphics;
-
+import java.awt.Graphics2D;
+import java.awt.Dimension;
+import java.awt.Color;
+import java.awt.Rectangle;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Iterator;
 import javax.swing.JPanel;
 
 public class Game extends JPanel implements Runnable{
@@ -12,6 +18,10 @@ public class Game extends JPanel implements Runnable{
 	
 	ControleTeclado keyH = new ControleTeclado();
 	Thread gameThread;
+	personagem personagem;
+	item item;
+	boolean jogoRodando = false;
+	boolean personagemTemVassoura = false;
 	
 	int speedPlayer = 4;
 	//posição de origem do jogador
@@ -23,6 +33,22 @@ public class Game extends JPanel implements Runnable{
 		this.addKeyListener(keyH);
 		this.setFocusable(true);
 		
+	}
+	public void setupGame() {
+		int yPersonagemInicial = ALTURA_JANELA - (ALTURA_TILE * 2);
+		int yLimiteVassoura = ALTURA_TILE;
+
+		personagem = new Personagem(LARGURA_JANELA / 2 - LARGURA_TILE / 2, yPersonagemInicial, LARGURA_TILE,
+				ALTURA_TILE, 4, yLimiteItem, LARGURA_JANELA, ALTURA_JANELA);
+
+		item = new item(LARGURA_TILE, ALTURA_TILE);
+
+		Inimigo = new ArrayList<>();
+		inicializarInimigo();
+
+		personagemTemItem = false;
+		item.setAtiva(false);
+		jogoRodando = true;
 	}
 	
 	public void startGameThread() {
@@ -80,7 +106,56 @@ public class Game extends JPanel implements Runnable{
 		else if(keyH.leftPressed == true) {
 			playerX -= speedPlayer;
 		}
+		
+		if (!personagemTemItem && personagem.chegouAoLocalDaItem()) {
+			personagemTemItem = true;
+			item.setAtiva(true);
+			System.out.println("Personagem pegou a vassoura!");
+		}
+
+		if (personagemTemItem) {
+			item.update(personagem);
+			verificarColisaoVassouraComLixo();
+		} else {
+			verificarColisaoPersonagemComLixo();
+		}
+
+		for (Inimigo lixo : Inimigo) {
+			if (lixo.isVisivel()) {
+				// lixo.update();
+			}
+		}
 	}
+	
+	public void verificarColisaoPersonagemComLixo() {
+		Rectangle boundsPersonagem = personagem.getBounds();
+		for (Inimigo lixo : Inimigo) {
+			if (lixo.isVisivel() && boundsPersonagem.intersects(lixo.getBounds())) {
+				System.out.println("GAME OVER: Personagem colidiu com lixo!");
+				jogoRodando = false;
+				return;
+			}
+		}
+	}
+	
+	public void verificarColisaoVassouraComLixo() {
+		if (!item.isAtiva()) {
+			return;
+		}
+
+		Rectangle boundsVassoura = item.getBounds();
+		Iterator<Inimigo> iterator = Inimigo.iterator();
+
+		while (iterator.hasNext()) {
+			Inimigo lixo = iterator.next();
+			if (lixo.isVisivel() && boundsVassoura.intersects(lixo.getBounds())) {
+				System.out.println("Vassoura limpou um lixo!");
+				lixo.setVisivel(false);
+			}
+		}
+	}
+	
+	
 	//possivelmente os lugares que vão estar o sprites
 	public void paintComponent(Graphics g) {
 		
